@@ -22,12 +22,15 @@ export function Header() {
           <span className="font-bold">Financially</span>
         </Link>
         <nav className="hidden md:flex items-center space-x-6 text-sm font-medium">
-          <Link href="/retirement-simulator" className="transition-colors hover:text-foreground/80">
+          {/* New link for the Screener page */}
+          <Link href="/screener" className="transition-colors hover:text-foreground/80 text-foreground/60">
+            Screener
+          </Link>
+          <Link href="/retirement-simulator" className="transition-colors hover:text-foreground/80 text-foreground/60">
             Simulator
           </Link>
-          {/* THE NEW LINK, PLACED CORRECTLY */}
           <Link href="/stock-analysis" className="transition-colors hover:text-foreground/80 text-foreground/60">
-            Stock Analysis
+            Analysis
           </Link>
           <Link href="/learn" className="transition-colors hover:text-foreground/80 text-foreground/60">
             Learn

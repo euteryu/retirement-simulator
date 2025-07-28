@@ -4,35 +4,26 @@
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Loader2, ArrowLeft, TrendingUp, TrendingDown, Minus, Info } from 'lucide-react';
+import { Loader2, ArrowLeft } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { MetricDetailModal } from './MetricDetailModal';
 
-// Define the shape of the data we expect from our API
-interface StockAnalysisData {
-  symbol: string; name: string; description: string; sector: string; industry: string;
-  marketCap: string; peRatio: number; eps: number; beta: number; dividendYield: number;
-  yearHigh: number; yearLow: number; analystTargetPrice: number;
-  recentEarnings: { fiscalDateEnding: string; reportedEPS: number; estimatedEPS: number }[];
+// Interface for the data we get from our Tiingo-powered backend
+interface TiingoAnalysisData {
+  symbol: string;
+  name: string;
+  description: string;
+  exchange: string;
+  startDate: string;
+  endDate: string;
+  news: {
+    id: number;
+    title: string;
+    url: string;
+    description: string;
+    publishedDate: string;
+    source: string;
+  }[];
 }
-
-// A reusable card for displaying individual statistics
-const StatCard = ({ title, value, subtext, subtextColor = 'text-slate-400', metricId, onClick }: { title: string; value: string | number; subtext?: string, subtextColor?: string, metricId: string, onClick: (metricId: string) => void }) => (
-    <motion.div variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0 } }} className="h-full">
-      <Card className="bg-slate-800/50 border border-slate-700/50 h-full">
-          <CardHeader className="pb-2 flex-row items-center justify-between">
-              <CardTitle className="text-sm font-medium text-slate-400">{title}</CardTitle>
-              <Button variant="ghost" size="icon" className="h-6 w-6 text-slate-400 hover:bg-slate-700/50" onClick={() => onClick(metricId)}>
-                <Info className="h-4 w-4" />
-              </Button>
-          </CardHeader>
-          <CardContent>
-              <div className="text-2xl font-bold text-white">{value}</div>
-              {subtext && <p className={`text-xs ${subtextColor} mt-1`}>{subtext}</p>}
-          </CardContent>
-      </Card>
-    </motion.div>
-);
 
 interface StockAnalysisResultsProps {
     ticker: string;
@@ -40,10 +31,9 @@ interface StockAnalysisResultsProps {
 }
 
 export const StockAnalysisResults = ({ ticker, onBack }: StockAnalysisResultsProps) => {
-    const [analysis, setAnalysis] = useState<StockAnalysisData | null>(null);
+    const [analysis, setAnalysis] = useState<TiingoAnalysisData | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-    const [selectedMetric, setSelectedMetric] = useState<string | null>(null);
 
     useEffect(() => {
         const fetchAnalysis = async () => {
@@ -66,6 +56,9 @@ export const StockAnalysisResults = ({ ticker, onBack }: StockAnalysisResultsPro
         if (ticker) fetchAnalysis();
     }, [ticker]);
 
+    // --- RENDER STATES ---
+
+    // 1. Loading State
     if (isLoading) {
         return (
             <div className="flex flex-col items-center justify-center h-screen text-white">
@@ -75,6 +68,7 @@ export const StockAnalysisResults = ({ ticker, onBack }: StockAnalysisResultsPro
         );
     }
 
+    // 2. Error State
     if (error) {
         return (
             <div className="flex flex-col items-center justify-center h-screen text-white text-center p-4">
@@ -87,27 +81,26 @@ export const StockAnalysisResults = ({ ticker, onBack }: StockAnalysisResultsPro
         );
     }
 
+    // 3. THE CRUCIAL FIX: Success State Guard
+    // We only proceed to render the main content if `analysis` is a valid object.
     if (!analysis) {
-        return null;
+        // This handles the edge case where loading is done, there's no error, but data is still null.
+        // This is a safety net.
+        return (
+             <div className="flex flex-col items-center justify-center h-screen text-white text-center p-4">
+                <h2 className="text-2xl font-bold text-yellow-400">No Data Available</h2>
+                <p className="mt-2 text-slate-300 max-w-md">Could not retrieve analysis for {ticker}. The company may not be supported by the data provider.</p>
+                <Button onClick={onBack} variant="outline" className="mt-8 bg-transparent text-white hover:bg-slate-800 hover:text-white">
+                    <ArrowLeft className="mr-2 h-4 w-4" /> Try a New Search
+                </Button>
+            </div>
+        );
     }
 
-    const getPeContext = (pe: number) => {
-        if (pe > 40) return { text: "High (Growth Expected)", color: "text-green-400" };
-        if (pe > 0 && pe < 15) return { text: "Low (Potential Value)", color: "text-yellow-400" };
-        if (pe <= 0) return { text: "Not Profitable", color: "text-red-400" };
-        return { text: "Moderate" };
-    };
-
-    const getBetaContext = (beta: number) => {
-        if (beta > 1.2) return "More volatile than market";
-        if (beta < 0.8) return "Less volatile than market";
-        return "Similar volatility to market";
-    };
-
+    // If we reach this point, we are GUARANTEED that `analysis` is a valid object.
+    // The `TypeError` crash is now impossible.
     return (
-      <>
-        <MetricDetailModal metricId={selectedMetric} onClose={() => setSelectedMetric(null)} />
-        <div className="p-4 sm:p-6 lg:p-8 text-white">
+        <div className="p-4 sm:p-6 lg:p-8 text-white min-h-screen">
             <motion.div 
               initial={{ opacity: 0, y: -20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -122,13 +115,14 @@ export const StockAnalysisResults = ({ ticker, onBack }: StockAnalysisResultsPro
                 className="max-w-5xl mx-auto space-y-8"
                 initial="hidden"
                 animate="visible"
-                variants={{ visible: { transition: { staggerChildren: 0.05 } } }}
+                variants={{ visible: { transition: { staggerChildren: 0.1 } } }}
             >
+                {/* --- COMPANY OVERVIEW CARD --- */}
                 <motion.div variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0 } }}>
                     <Card className="bg-slate-800/50 border border-slate-700/50">
                         <CardHeader>
                             <CardTitle className="text-3xl font-extrabold text-white">{analysis.name} ({analysis.symbol})</CardTitle>
-                            <p className="text-indigo-300">{analysis.sector} | {analysis.industry}</p>
+                            <p className="text-indigo-300">Exchange: {analysis.exchange} | Data available from: {new Date(analysis.startDate).toLocaleDateString()}</p>
                         </CardHeader>
                         <CardContent>
                             <p className="text-slate-300 leading-relaxed line-clamp-4">{analysis.description}</p>
@@ -136,57 +130,34 @@ export const StockAnalysisResults = ({ ticker, onBack }: StockAnalysisResultsPro
                     </Card>
                 </motion.div>
                 
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                    <StatCard title="Market Cap" value={`$${analysis.marketCap}`} metricId="marketCap" onClick={setSelectedMetric} />
-                    <StatCard title="P/E Ratio" value={analysis.peRatio > 0 ? analysis.peRatio.toFixed(2) : "N/A"} metricId="peRatio" onClick={setSelectedMetric} subtext={getPeContext(analysis.peRatio).text} subtextColor={getPeContext(analysis.peRatio).color} />
-                    <StatCard title="EPS (TTM)" value={`$${analysis.eps.toFixed(2)}`} metricId="eps" onClick={setSelectedMetric} />
-                    <StatCard title="Dividend Yield" value={`${analysis.dividendYield.toFixed(2)}%`} metricId="dividendYield" onClick={setSelectedMetric} />
-                    <StatCard title="52-Week High" value={`$${analysis.yearHigh.toFixed(2)}`} metricId="yearHigh" onClick={setSelectedMetric} />
-                    <StatCard title="52-Week Low" value={`$${analysis.yearLow.toFixed(2)}`} metricId="yearLow" onClick={setSelectedMetric} />
-                    <StatCard title="Beta" value={analysis.beta.toFixed(2)} subtext={getBetaContext(analysis.beta)} metricId="beta" onClick={setSelectedMetric} />
-                    <StatCard title="Analyst Target" value={`$${analysis.analystTargetPrice.toFixed(2)}`} metricId="analystTarget" onClick={setSelectedMetric} />
-                </div>
-                
+                {/* --- LATEST NEWS CARD --- */}
                 <motion.div variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0 } }}>
                     <Card className="bg-slate-800/50 border border-slate-700/50">
-                        <CardHeader><CardTitle>Recent Quarterly Earnings (EPS)</CardTitle></CardHeader>
+                        <CardHeader>
+                            <CardTitle>Latest News</CardTitle>
+                        </CardHeader>
                         <CardContent>
                             <div className="space-y-6">
-                            {analysis.recentEarnings.map(q => {
-                                const didBeat = q.reportedEPS > q.estimatedEPS;
-                                const difference = Math.abs(q.reportedEPS - q.estimatedEPS);
-                                const beatIcon = didBeat ? <TrendingUp className="h-4 w-4 text-green-400" /> : q.reportedEPS === q.estimatedEPS ? <Minus className="h-4 w-4 text-yellow-400" /> : <TrendingDown className="h-4 w-4 text-red-400" />;
-
-                                return (
-                                <div key={q.fiscalDateEnding}>
-                                    <div className="flex justify-between items-center mb-1 text-sm font-medium">
-                                        <span className="text-slate-300">{q.fiscalDateEnding}</span>
-                                        <div className={`flex items-center gap-1 font-bold ${didBeat ? 'text-green-400' : 'text-red-400'}`}>
-                                            {beatIcon} {didBeat ? 'Beat' : 'Miss'} by ${difference.toFixed(2)}
+                                {analysis.news && analysis.news.length > 0 ? (
+                                    analysis.news.map(article => (
+                                        <div key={article.id} className="pb-6 border-b border-slate-700/50 last:border-b-0 last:pb-0">
+                                            <p className="text-xs text-slate-400 mb-1">
+                                                {new Date(article.publishedDate).toLocaleString()} - <span className="font-semibold">{article.source}</span>
+                                            </p>
+                                            <a href={article.url} target="_blank" rel="noopener noreferrer" className="text-lg font-bold text-white hover:text-indigo-300 transition-colors">
+                                                {article.title}
+                                            </a>
+                                            <p className="mt-2 text-sm text-slate-300 line-clamp-2">{article.description}</p>
                                         </div>
-                                    </div>
-                                    <div className="flex gap-2 items-center">
-                                        <span className="text-xs text-slate-400 w-28">Reported:</span>
-                                        <div className="w-full bg-slate-700 rounded-full h-2.5">
-                                            <div className="bg-indigo-500 h-2.5 rounded-full" style={{ width: `${Math.min(100, (q.reportedEPS / analysis.eps) * 50)}%` }}></div>
-                                        </div>
-                                        <span className="text-sm font-bold w-16 text-right">${q.reportedEPS}</span>
-                                    </div>
-                                    <div className="flex gap-2 items-center mt-1">
-                                        <span className="text-xs text-slate-400 w-28">Estimated:</span>
-                                        <div className="w-full bg-slate-700 rounded-full h-2.5">
-                                            <div className="bg-slate-500 h-2.5 rounded-full" style={{ width: `${Math.min(100, (q.estimatedEPS / analysis.eps) * 50)}%` }}></div>
-                                        </div>
-                                        <span className="text-sm font-bold w-16 text-right">${q.estimatedEPS}</span>
-                                    </div>
-                                </div>
-                            )})}
+                                    ))
+                                ) : (
+                                    <p className="text-slate-400">No recent news found for this ticker.</p>
+                                )}
                             </div>
                         </CardContent>
                     </Card>
                 </motion.div>
             </motion.div>
         </div>
-      </>
     );
 };

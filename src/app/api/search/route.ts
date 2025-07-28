@@ -10,36 +10,35 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: 'Keywords are required' }, { status: 400 });
   }
 
-  const apiKey = process.env.ALPHA_VANTAGE_API_KEY;
+  const apiKey = process.env.TIINGO_API_KEY;
   if (!apiKey) {
-    console.error("ALPHA_VANTAGE_API_KEY is not defined in .env.local");
-    return NextResponse.json({ error: 'API key is not configured' }, { status: 500 });
+    // ... error handling ...
   }
+  
+  const headers = {
+    'Authorization': `Token ${apiKey}`
+  };
 
   try {
-    const response = await fetch(`https://www.alphavantage.co/query?function=SYMBOL_SEARCH&keywords=${keywords}&apikey=${apiKey}`);
+    // Use the URL parameter method here as the docs specifically show it for this endpoint
+    const response = await fetch(`https://api.tiingo.com/tiingo/utilities/search?query=${keywords}`, { headers });
+    
     if (!response.ok) {
-        throw new Error('Failed to fetch search results from financial API.');
+        const errorData = await response.json();
+        throw new Error(errorData.detail || 'Failed to fetch search results from Tiingo API.');
     }
     
     const data = await response.json();
 
-    // Check for API limit message
-    if (data['Note']) {
-        throw new Error('API call frequency limit reached. Please wait a minute.');
-    }
-
-    // Process the results into a cleaner format
-    const matches = data.bestMatches?.map((match: any) => ({
-        symbol: match['1. symbol'],
-        name: match['2. name'],
-        region: match['4. region'],
-    })) || [];
+    const matches = data.map((match: any) => ({
+        symbol: match.ticker,
+        name: match.name,
+    }));
 
     return NextResponse.json(matches);
 
   } catch (error: any) {
-    console.error("[API/search] Error:", error.message);
+    console.error("[API/search] Tiingo Error:", error.message);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
