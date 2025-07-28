@@ -1,7 +1,6 @@
 // src/lib/simulation.ts
 import { HISTORICAL_DATA } from './constants';
 
-// Define a type for our simulation results for type safety
 export interface SimulationResult {
   portfolioValues: number[];
   annualReturns: number[];
@@ -23,10 +22,11 @@ export const simulatePortfolio = (
   const portfolioValues: number[] = [];
   const annualReturns: number[] = [];
   let portfolio = startCapital;
-  let withdrawal = annualWithdrawal;
+  let currentWithdrawal = annualWithdrawal;
   
   const years = Array.from({ length: endYear - startYear + 1 }, (_, i) => startYear + i);
-  
+  let totalWithdrawn = 0;
+
   for (let i = 0; i < years.length; i++) {
     const year = years[i];
     
@@ -53,22 +53,37 @@ export const simulatePortfolio = (
     
     annualReturns.push(weightedReturn);
     
+    // Apply returns at the beginning of the year
     portfolio *= (1 + weightedReturn);
     
+    // Handle cashflow
+    let effectiveWithdrawal = 0;
     if (i < incomeYears) {
-      portfolio += (annualIncome - withdrawal);
+      const netCashflow = annualIncome - currentWithdrawal;
+      portfolio += netCashflow;
+      effectiveWithdrawal = currentWithdrawal; // We still count this as "withdrawn" for living expenses
     } else {
-      portfolio -= withdrawal;
+      portfolio -= currentWithdrawal;
+      effectiveWithdrawal = currentWithdrawal;
     }
     
-    portfolio = Math.max(0, portfolio);
+    // Portfolio can't be negative, but withdrawals still count
+    if (portfolio < 0) {
+        // If portfolio went from positive to negative, you only got what was left
+        const lastPositiveValue = portfolioValues.length > 0 ? portfolioValues[portfolioValues.length - 1] * (1 + weightedReturn) : startCapital * (1 + weightedReturn);
+        totalWithdrawn += Math.max(0, lastPositiveValue);
+        portfolio = 0;
+    } else {
+        totalWithdrawn += effectiveWithdrawal;
+    }
+    
     portfolioValues.push(portfolio);
     
     if (inflationAdj) {
-      withdrawal *= 1.02;
+      currentWithdrawal *= 1.02;
     }
 
-    if (portfolio <= 0) {
+    if (portfolio === 0) {
       const remaining = years.length - (i + 1);
       if (remaining > 0) {
         portfolioValues.push(...Array(remaining).fill(0));
@@ -78,28 +93,32 @@ export const simulatePortfolio = (
     }
   }
 
-  // Calculate Summary Metrics
+  // --- More Accurate Metrics Calculation ---
   const finalValue = portfolioValues[portfolioValues.length - 1] ?? 0;
   
-  let peak = Math.max(startCapital, ...portfolioValues);
+  let peak = startCapital;
   let maxDrawdown = 0;
   portfolioValues.forEach(value => {
-    const drawdown = (peak - value) / peak;
+    if(value > peak) peak = value;
+    const drawdown = peak > 0 ? (peak - value) / peak : 0;
     if (drawdown > maxDrawdown) maxDrawdown = drawdown;
   });
   
   const avgReturn = annualReturns.reduce((a, b) => a + b, 0) / annualReturns.length;
   const volatility = Math.sqrt(annualReturns.reduce((sum, r) => sum + Math.pow(r - avgReturn, 2), 0) / annualReturns.length);
-  const yearsLasted = portfolioValues.findIndex(v => v <= 0);
+  
+  const yearsLastedIndex = portfolioValues.findIndex(v => v === 0);
+  const yearsLasted = yearsLastedIndex === -1 ? years.length : yearsLastedIndex + 1;
 
   return {
     portfolioValues,
     annualReturns,
     summary: {
       "Final Value": finalValue,
+      "Total Withdrawn": totalWithdrawn,
       "Max Drawdown": `${(maxDrawdown * 100).toFixed(1)}%`,
-      "Volatility": `${(volatility * 100).toFixed(1)}%`,
-      "Years Lasted": yearsLasted === -1 ? `${years.length}/${years.length}` : `${yearsLasted}/${years.length}`,
+      "Volatility (Std. Dev)": `${(volatility * 100).toFixed(1)}%`,
+      "Years Lasted": `${yearsLasted}/${years.length}`,
       "Success": finalValue > 0 ? "100%" : "0%",
     },
     allocation

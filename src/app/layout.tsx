@@ -1,27 +1,37 @@
 // src/app/layout.tsx
 import type { Metadata } from 'next';
-import { Inter } from 'next/font/google';
+// 1. Import Poppins instead of Inter
+import { Poppins } from 'next/font/google';
 import './globals.css';
 import { Header } from '@/components/layout/Header';
+import { LanguageProvider } from '@/context/LanguageContext';
+import { ThemeProvider } from '@/context/ThemeProvider';
 
-const inter = Inter({ subsets: ['latin'] });
+// 2. Configure the Poppins font with desired weights and a CSS variable
+const poppins = Poppins({
+  subsets: ['latin'],
+  weight: ['300', '400', '500', '700', '900'],
+  variable: '--font-poppins',
+});
 
-export const metadata: Metadata = {
-  title: 'Financially - Your Personal Finance Toolkit',
-  description: 'Tools to help you understand and plan your financial future.',
-};
+export const metadata: Metadata = { /* ... */ };
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className="dark">
-      <body className={inter.className}>
-        <Header />
-        <main className="flex-grow">{children}</main>
-        {/* You can add a Footer component here later */}
+    <html lang="en" suppressHydrationWarning>
+      {/* 3. Apply the font variable to the body */}
+      <body className={`${poppins.variable} font-sans`}>
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="system"
+          enableSystem
+          disableTransitionOnChange
+        >
+          <LanguageProvider>
+            <Header />
+            <main>{children}</main>
+          </LanguageProvider>
+        </ThemeProvider>
       </body>
     </html>
   );
