@@ -25,6 +25,10 @@ export function Header() {
           <Link href="/retirement-simulator" className="transition-colors hover:text-foreground/80">
             Simulator
           </Link>
+          {/* THE NEW LINK, PLACED CORRECTLY */}
+          <Link href="/stock-analysis" className="transition-colors hover:text-foreground/80 text-foreground/60">
+            Stock Analysis
+          </Link>
           <Link href="/learn" className="transition-colors hover:text-foreground/80 text-foreground/60">
             Learn
           </Link>
