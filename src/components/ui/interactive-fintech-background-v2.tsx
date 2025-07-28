@@ -3,48 +3,23 @@
 
 import React, { useRef, useEffect } from 'react';
 
-// The Particle class needs to be defined outside the component to be accessible inside useEffect
-class Particle {
-    x: number; y: number; z: number;
-    vx: number; vy: number;
-    char: string; life: number; type: 'symbol' | 'number' | 'formula';
-
-    constructor(x: number, y: number) {
-        this.x = x; this.y = y;
-        this.z = Math.random() * 2 + 1;
-        this.vx = (Math.random() - 0.5) * 4;
-        this.vy = (Math.random() - 0.5) * 4;
-        this.char = CHARS[Math.floor(Math.random() * CHARS.length)];
-        this.life = 0;
-
-        if ('0123456789'.includes(this.char)) this.type = 'number';
-        else if ('$%£€¥'.includes(this.char)) this.type = 'symbol';
-        else this.type = 'formula';
-    }
-}
-
 const CHARS = [
     '$', '£', '€', '¥', '%', 'Σ', 'β', 'α', 'Δ', 'μ', 'π', 'σ', '∫', 'ƒ', '∂', '√',
     '=', '+', '-', '(', ')', '[', ']', 't', 'n', 'i', 'r',
     ...'0123456789'
 ];
 
-const PARTICLE_COUNT = 300;
-const GRAVITY = 0.04;
-const INACTIVITY_TIMEOUT = 5000;
+const PARTICLE_COUNT = 400;
 
 const COLORS = {
-    symbol: 'hsl(244, 84%, 68%)',
-    number: 'hsl(210, 40%, 96%)',
-    formula: 'hsl(142, 71%, 45%)',
+    symbol: { h: 244, s: 84, l: 68 },
+    number: { h: 210, s: 40, l: 96 },
+    formula: { h: 142, s: 71, l: 45 },
 };
 
 export const InteractiveFintechBackgroundV2 = () => {
     const canvasRef = useRef<HTMLCanvasElement>(null);
-    
-    // FIX: Initialize mouse ref with null or a non-window-dependent value.
-    const mouse = useRef<{ x: number, y: number } | null>(null);
-    
+    const mouse = useRef({ x: 0, y: 0 });
     const particles = useRef<any[]>([]);
     const activityState = useRef({
         isActive: false,
@@ -52,7 +27,6 @@ export const InteractiveFintechBackgroundV2 = () => {
     });
 
     useEffect(() => {
-        // All code that uses `window` or `document` must be inside useEffect.
         const canvas = canvasRef.current;
         if (!canvas) return;
         const context = canvas.getContext('2d');
@@ -60,22 +34,15 @@ export const InteractiveFintechBackgroundV2 = () => {
         
         let animationFrameId: number;
 
-        // FIX: Initialize mouse ref here, inside the client-only useEffect.
-        if (mouse.current === null) {
-            mouse.current = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
-        }
-
         const resizeCanvas = () => {
             canvas.width = window.innerWidth;
             canvas.height = window.innerHeight;
-            // Don't reset mouse position on resize, let it be where it was.
+            mouse.current = { x: canvas.width / 2, y: canvas.height / 2 };
         };
 
         const onMouseMove = (event: MouseEvent) => {
-            if (mouse.current) {
-                mouse.current.x = event.clientX;
-                mouse.current.y = event.clientY;
-            }
+            mouse.current.x = event.clientX;
+            mouse.current.y = event.clientY;
             
             activityState.current.isActive = true;
             if (activityState.current.timer) {
@@ -83,57 +50,116 @@ export const InteractiveFintechBackgroundV2 = () => {
             }
             activityState.current.timer = setTimeout(() => {
                 activityState.current.isActive = false;
-            }, INACTIVITY_TIMEOUT);
+            }, 100);
         };
 
+        class Particle {
+            x: number; y: number; z: number;
+            vx: number; vy: number; vz: number;
+            char: string; life: number; maxLife: number;
+            type: 'symbol' | 'number' | 'formula';
+            baseColor: { h: number, s: number, l: number };
+            isHero: boolean;
+
+            constructor(x: number, y: number) {
+                this.x = x; this.y = y; this.z = 0;
+                this.life = 0;
+                this.char = CHARS[Math.floor(Math.random() * CHARS.length)];
+                
+                if ('0123456789'.includes(this.char)) this.type = 'number';
+                else if ('$%£€¥'.includes(this.char)) this.type = 'symbol';
+                else this.type = 'formula';
+                this.baseColor = COLORS[this.type];
+
+                this.isHero = Math.random() > 0.98;
+
+                if (this.isHero) {
+                    this.maxLife = 180;
+                    this.char = '0123456789$%£€¥'[Math.floor(Math.random() * 15)];
+                    this.type = 'number';
+                    this.baseColor = COLORS.number;
+                    this.vx = (Math.random() - 0.5) * 0.5;
+                    this.vy = (Math.random() - 0.5) * 0.5;
+                    this.vz = Math.random() * 1.5 + 1.5;
+                } else {
+                    this.maxLife = 100;
+                    const theta = Math.random() * Math.PI * 2;
+                    const phi = Math.acos(Math.random() * 2 - 1);
+                    const speed = Math.random() * 4 + 2;
+                    this.vx = speed * Math.sin(phi) * Math.cos(theta);
+                    this.vy = speed * Math.sin(phi) * Math.sin(theta);
+                    this.vz = speed * Math.cos(phi);
+                }
+            }
+        }
+
         const loop = () => {
-            if (activityState.current.isActive && particles.current.length < PARTICLE_COUNT && mouse.current) {
-                for (let i = 0; i < 5; i++) {
+            if (activityState.current.isActive && particles.current.length < PARTICLE_COUNT) {
+                for (let i = 0; i < 7; i++) {
                     particles.current.push(new Particle(mouse.current.x, mouse.current.y));
                 }
             }
             
-            context.fillStyle = 'rgba(15, 23, 42, 0.2)';
+            context.fillStyle = 'rgba(15, 23, 42, 0.25)';
             context.fillRect(0, 0, canvas.width, canvas.height);
+
+            particles.current.sort((a, b) => a.z - b.z);
 
             for (let i = particles.current.length - 1; i >= 0; i--) {
                 const p = particles.current[i];
                 p.life++;
-                p.vy += GRAVITY;
-                p.x += p.vx;
-                p.y += p.vy;
+                p.x += p.vx; p.y += p.vy; p.z += p.vz;
+                p.vx *= 0.98; p.vy *= 0.98; p.vz *= 0.98;
                 
-                if (!activityState.current.isActive) { p.vx *= 0.96; p.vy *= 0.96; } 
-                else { p.vx *= 0.99; p.vy *= 0.99; }
+                let opacity, fontSize;
 
-                if (p.x < 0 || p.x > canvas.width || p.y < 0 || p.y > canvas.height) {
+                // --- THIS IS THE CRITICAL FIX ---
+                // We now correctly check for the `isHero` flag and apply the special logic.
+                if (p.isHero) {
+                    const lifeRatio = p.life / p.maxLife;
+                    const growthFactor = Math.pow(lifeRatio, 3);
+                    fontSize = 20 + growthFactor * (canvas.height * 1.2);
+                    
+                    // This creates a fade-in, hold, and sharp fade-out effect
+                    const fadeOutStart = 0.7;
+                    const fadeOutDuration = 1.0 - fadeOutStart;
+                    const fadeOutFactor = Math.pow(Math.max(0, (lifeRatio - fadeOutStart) / fadeOutDuration), 3);
+                    opacity = Math.sin(lifeRatio * Math.PI) * (1 - fadeOutFactor);
+                } else {
+                    // This is the logic for all normal particles
+                    const perspective = 300 / (300 + p.z);
+                    fontSize = Math.max(1, 20 * perspective);
+                    opacity = Math.max(0, 1 - p.life / p.maxLife);
+                }
+
+                if (opacity <= 0.01 || p.life >= p.maxLife) {
                     particles.current.splice(i, 1);
                     continue;
                 }
+
+                const perspective = 300 / (300 + p.z);
+                const screenX = canvas.width / 2 + (p.x - canvas.width / 2) * perspective;
+                const screenY = canvas.height / 2 + (p.y - canvas.height / 2) * perspective;
                 
-                const opacity = Math.max(0, 1 - p.life / 200);
                 context.globalAlpha = opacity;
-                const fontSize = 12 * p.z;
-                context.font = `bold ${fontSize}px var(--font-poppins), monospace`;
-                context.fillStyle = COLORS[p.type as keyof typeof COLORS];
-                context.fillText(p.char, p.x, p.y);
+                context.font = `bold ${fontSize.toFixed(0)}px var(--font-poppins), monospace`;
+                const lightness = p.baseColor.l + p.z / 4;
+                context.fillStyle = `hsl(${p.baseColor.h}, ${p.baseColor.s}%, ${lightness}%)`;
                 
-                if (opacity <= 0) {
-                    particles.current.splice(i, 1);
-                }
+                context.textAlign = "center";
+                context.textBaseline = "middle";
+                context.fillText(p.char, screenX, screenY);
             }
             context.globalAlpha = 1;
             
             animationFrameId = window.requestAnimationFrame(loop);
         };
 
-        // Initialize and start
         resizeCanvas();
         window.addEventListener('resize', resizeCanvas);
         window.addEventListener('mousemove', onMouseMove);
         loop();
 
-        // Cleanup
         return () => {
             window.removeEventListener('resize', resizeCanvas);
             window.removeEventListener('mousemove', onMouseMove);
