@@ -51,7 +51,7 @@ export default function PlaybookPage() {
                     <p>Start with a top-down view. Look for broad trends or sectors that are out of favor but have improving fundamentals.</p>
                     <ul>
                         <li><strong>Catalysts:</strong> Track industry-specific events like FDA calendars for biotech or policy shifts like the IRA for clean energy.</li>
-                        <li><strong>Contrarian Screens:</strong> Screen for entire sectors down by more than 30% YTD. Are inventories falling while demand is picking up?</li>
+                        <li><strong>Contrarian Screens:</strong> Screen for entire sectors down more than 30% YTD. Are inventories falling while demand is picking up?</li>
                     </ul>
                     <h4>Superinvestor Cloning & Dumpster Diving</h4>
                     <p>Stand on the shoulders of giants, then dig where they aren't looking.</p>

@@ -3,6 +3,7 @@ import type { Metadata } from 'next';
 // 1. Import Poppins instead of Inter
 import { Poppins } from 'next/font/google';
 import './globals.css';
+import 'katex/dist/katex.min.css'; // <-- ADD THIS LINE
 import { Header } from '@/components/layout/Header';
 import { LanguageProvider } from '@/context/LanguageContext';
 import { ThemeProvider } from '@/context/ThemeProvider';

@@ -22,19 +22,14 @@ export function Header() {
           <span className="font-bold">Financially</span>
         </Link>
         <nav className="hidden md:flex items-center space-x-6 text-sm font-medium">
-          {/* New link for the Screener page */}
-          <Link href="/screener" className="transition-colors hover:text-foreground/80 text-foreground/60">
-            Screener
+          <Link href="/screener">Screener</Link>
+          <Link href="/retirement-simulator">Simulator</Link>
+          <Link href="/stock-analysis">Analysis</Link>
+          <Link href="/playbook">Playbook</Link> {/* <-- Ensure this exists */}
+          <Link href="/burry-tips" className="transition-colors hover:text-foreground/80 text-foreground/60">
+            Burry's Tips
           </Link>
-          <Link href="/retirement-simulator" className="transition-colors hover:text-foreground/80 text-foreground/60">
-            Simulator
-          </Link>
-          <Link href="/stock-analysis" className="transition-colors hover:text-foreground/80 text-foreground/60">
-            Analysis
-          </Link>
-          <Link href="/learn" className="transition-colors hover:text-foreground/80 text-foreground/60">
-            Learn
-          </Link>
+          <Link href="/learn">Learn</Link>
         </nav>
         <div className="flex flex-1 items-center justify-end space-x-2 md:space-x-4">
            <Button variant="outline" size="sm" onClick={toggleLanguage}>
