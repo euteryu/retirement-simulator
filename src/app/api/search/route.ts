@@ -2,6 +2,12 @@
 
 import { NextResponse } from 'next/server';
 
+// Define the shape of the object we expect from the Tiingo search API
+interface TiingoSearchResult {
+    ticker: string;
+    name: string;
+}
+
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const keywords = searchParams.get('keywords');
@@ -12,7 +18,8 @@ export async function GET(request: Request) {
 
   const apiKey = process.env.TIINGO_API_KEY;
   if (!apiKey) {
-    // ... error handling ...
+    console.error("TIINGO_API_KEY is not defined in .env.local");
+    return NextResponse.json({ error: 'API key is not configured' }, { status: 500 });
   }
   
   const headers = {
@@ -20,7 +27,6 @@ export async function GET(request: Request) {
   };
 
   try {
-    // Use the URL parameter method here as the docs specifically show it for this endpoint
     const response = await fetch(`https://api.tiingo.com/tiingo/utilities/search?query=${keywords}`, { headers });
     
     if (!response.ok) {
@@ -28,17 +34,19 @@ export async function GET(request: Request) {
         throw new Error(errorData.detail || 'Failed to fetch search results from Tiingo API.');
     }
     
-    const data = await response.json();
+    const data: TiingoSearchResult[] = await response.json(); // Type the response data
 
-    const matches = data.map((match: any) => ({
+    // Map to the format our frontend expects, ensuring no `any` is used
+    const matches = data.map((match: TiingoSearchResult) => ({
         symbol: match.ticker,
         name: match.name,
     }));
 
     return NextResponse.json(matches);
 
-  } catch (error: any) {
-    console.error("[API/search] Tiingo Error:", error.message);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  } catch (error: unknown) { // FIX: Use `unknown` instead of `any`
+    const message = error instanceof Error ? error.message : String(error);
+    console.error("[API/search] Tiingo Error:", message);
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }

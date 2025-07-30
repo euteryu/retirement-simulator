@@ -2,18 +2,34 @@
 
 import { NextResponse } from 'next/server';
 
+// Define a type for the company object from the FMP API
+interface FMPCompany {
+    symbol: string;
+    companyName: string;
+    marketCap: number | null;
+    sector: string | null;
+    price: number | null;
+    beta: number | null;
+    volume: number | null;
+    exchange: string | null; // THE FIX: Renamed from `exchangeShortName` to `exchange`
+    dividendYield: number | null;
+    peRatio: number | null;
+    roe: number | null;
+    debtToEquity: number | null;
+    yearHigh: number | null;
+    yearLow: number | null;
+}
+
 const screenerCache = {
-    // We will now cache the full, unfiltered list
-    fullList: null as any[] | null,
+    data: null as FMPCompany[] | null,
     timestamp: 0,
 };
-const CACHE_DURATION_MS = 60 * 60 * 1000; // Cache the full list for 1 hour
+const CACHE_DURATION_MS = 60 * 60 * 1000;
 
 export async function GET() {
-    // 1. Check if the full list is already cached and fresh
-    if (screenerCache.fullList && (Date.now() - screenerCache.timestamp < CACHE_DURATION_MS)) {
-        console.log("[API/screener] Serving full list from cache.");
-        return NextResponse.json(screenerCache.fullList);
+    if (screenerCache.data && (Date.now() - screenerCache.timestamp < CACHE_DURATION_MS)) {
+        console.log("[API/screener] Serving cached screener list.");
+        return NextResponse.json(screenerCache.data);
     }
 
     const apiKey = process.env.FINANCIAL_MODELING_PREP_API_KEY;
@@ -23,51 +39,52 @@ export async function GET() {
     }
 
     try {
-        console.log("[API/screener] Cache miss or stale. Fetching fresh tradable symbols list from FMP...");
+        console.log("[API/screener] Cache miss. Fetching fresh screener list from FMP...");
         
-        // THE FIX: Use a more reliable, free-tier-friendly endpoint
-        const response = await fetch(`https://financialmodelingprep.com/api/v3/stock/list?apikey=${apiKey}`);
+        const screenerUrl = `https://financialmodelingprep.com/api/v3/stock-screener?marketCapMoreThan=50000000&priceMoreThan=1&isActivelyTrading=true&exchange=NASDAQ,NYSE&apikey=${apiKey}`;
+        
+        const response = await fetch(screenerUrl);
         
         if (!response.ok) {
-            throw new Error('Failed to fetch company list from FMP. The API may be down or the key is invalid.');
+            const errorText = await response.text();
+            throw new Error(`API call failed with status: ${response.status}. Response: ${errorText}`);
         }
 
-        const allCompanies = await response.json();
+        const companies = await response.json();
+
+        if (!companies || companies.length === 0 || companies["Error Message"]) {
+            throw new Error("FMP Screener API returned an empty list or an error.");
+        }
+
+        console.log(`Successfully fetched raw data for ${companies.length} companies.`);
         
-        // Filter for high-quality, relevant stocks on our server
-        // This gives us our "S&P 500-like" universe without a premium API call
-        const filteredList = allCompanies.filter((company: any) => 
-            (company.exchangeShortName === "NASDAQ" || company.exchangeShortName === "NYSE") &&
-            company.type === "stock" &&
-            company.price != null && company.price > 1 // Filter out penny stocks
-        );
-        
-        // We need to fetch additional details like sector and market cap. We'll do it for a smaller, curated list.
-        // To be API-efficient, we'll fetch details in a batch for the top 500 by a simple metric (like price or volume).
-        // For simplicity in this MVP, we will use the data we have. A more advanced version would batch requests for more details.
-        
-        // For now, let's map the data we have to the format our frontend expects
-        const formattedList = filteredList.map((c: any) => ({
+        // This mapping now perfectly aligns with our FMPCompany interface
+        const formattedCompanies: FMPCompany[] = companies.map((c: any) => ({
             symbol: c.symbol,
-            companyName: c.name,
-            marketCap: c.price * (c.volume || 1), // A very rough proxy for market cap
-            sector: "N/A", // Not available in this endpoint, will show N/A in UI
+            companyName: c.companyName,
+            marketCap: c.marketCap,
+            sector: c.sector,
             price: c.price,
-            beta: 0, // Not available
+            beta: c.beta,
             volume: c.volume,
-            exchange: c.exchangeShortName,
-            lastAnnualDividend: 0 // Not available
+            exchange: c.exchangeShortName, // The source data has 'exchangeShortName', we map it to 'exchange'
+            dividendYield: c.dividendYield,
+            peRatio: c.peRatio,
+            roe: c.roe,
+            debtToEquity: c.debtToEquity,
+            yearHigh: c.yearHigh,
+            yearLow: c.yearLow
         }));
-
-        // 3. Cache the fresh data
-        screenerCache.fullList = formattedList;
+        
+        screenerCache.data = formattedCompanies;
         screenerCache.timestamp = Date.now();
-        console.log(`[API/screener] Successfully fetched and cached ${formattedList.length} companies.`);
+        console.log(`[API/screener] Successfully fetched and cached ${formattedCompanies.length} companies.`);
 
-        return NextResponse.json(formattedList);
+        return NextResponse.json(formattedCompanies);
 
-    } catch (error: any) {
-        console.error(`[API/screener] Fetch failed: ${error.message}`);
-        return NextResponse.json({ error: error.message }, { status: 500 });
+    } catch (error: unknown) {
+        const message = error instanceof Error ? error.message : String(error);
+        console.error(`[API/screener] Fetch failed: ${message}`);
+        return NextResponse.json({ error: message }, { status: 500 });
     }
 }

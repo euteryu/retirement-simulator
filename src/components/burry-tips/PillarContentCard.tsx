@@ -1,55 +1,60 @@
+// src/components/burry-tips/PillarContentCard.tsx
 'use client';
 
 import { motion } from 'framer-motion';
+import { X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { ChevronLeft } from 'lucide-react';
-import { Pillar } from '@/types/burry';
 
-// Re-using the InsightCard styling for consistency
-const InsightCard = ({ title, icon, children }: { title: string, icon: React.ReactNode, children: React.ReactNode }) => (
-    <div className="p-6 bg-slate-800/50 border border-slate-700/50 rounded-xl not-prose h-full">
-        {/* We can make the title even bigger to maintain hierarchy */}
-        <h3 className="font-semibold text-3xl text-white mb-6 flex items-center gap-3">{icon} {title}</h3>
-
-        {/* --- THE FIX IS HERE --- */}
-        {/* This outer div sets the base font size and line height. */}
-        <div className="text-[22px] leading-relaxed">
-            {/* The inner div applies prose styling, which now inherits the 22px base size. */}
-            <div className="prose dark:prose-invert max-w-none 
-                            prose-p:text-inherit 
-                            prose-li:text-inherit
-                            prose-strong:text-white"
-            >
-                {children}
-            </div>
-        </div>
-    </div>
-);
-
-interface PillarContentCardProps {
-    pillar: Pillar;
-    onBack: () => void;
+// This is a placeholder for the full Pillar type
+interface Pillar {
+    id: string;
+    title: string;
+    description: string;
+    bulletPoints: string[];
+    quote: {
+        text: string;
+        author: string;
+    };
 }
 
-export default function PillarContentCard({ pillar, onBack }: PillarContentCardProps) {
+// FIX: Update the props interface to include the `onClose` function.
+interface PillarContentCardProps {
+    pillar: Pillar;
+    onClose: () => void;
+}
+
+export default function PillarContentCard({ pillar, onClose }: PillarContentCardProps) {
     return (
         <motion.div
-            className="absolute inset-0 p-4"
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.95 }}
-            transition={{ duration: 0.3, ease: 'easeInOut' }}
+            initial={{ opacity: 0, scale: 0.95, y: 50 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.95, y: 50 }}
+            transition={{ type: 'spring', damping: 20, stiffness: 200 }}
+            className="absolute z-20 w-[90vw] max-w-lg p-6 bg-slate-800/80 backdrop-blur-md border border-slate-700 rounded-2xl shadow-2xl"
         >
-            <div className="flex flex-col h-full">
-                 <Button onClick={onBack} variant="ghost" className="self-start mb-4">
-                    <ChevronLeft className="h-4 w-4 mr-2" />
-                    Back to Selection
+            <div className="relative">
+                <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className="absolute -top-2 -right-2 h-8 w-8 rounded-full"
+                    onClick={onClose}
+                >
+                    <X className="h-5 w-5" />
                 </Button>
-                <div className="flex-grow">
-                    <InsightCard title={pillar.title} icon={pillar.icon}>
-                        {pillar.content}
-                    </InsightCard>
-                </div>
+
+                <h2 className="text-2xl font-bold text-white mb-2">{pillar.title}</h2>
+                <p className="text-sm text-slate-400 mb-4">{pillar.description}</p>
+                
+                <ul className="space-y-2 list-disc list-inside text-slate-200 mb-6">
+                    {pillar.bulletPoints.map((point, index) => (
+                        <li key={index}>{point}</li>
+                    ))}
+                </ul>
+
+                <blockquote className="border-l-4 border-slate-600 pl-4">
+                    <p className="italic text-slate-300">"{pillar.quote.text}"</p>
+                    <footer className="text-right text-sm text-slate-400 mt-1">- {pillar.quote.author}</footer>
+                </blockquote>
             </div>
         </motion.div>
     );

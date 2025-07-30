@@ -1,14 +1,11 @@
 {
   "compilerOptions": {
-    "target": "es5",
-    "lib": [
-      "dom",
-      "dom.iterable",
-      "esnext"
-    ],
+    "target": "es2017",
+    "lib": ["dom", "dom.iterable", "esnext"],
     "allowJs": true,
     "skipLibCheck": true,
     "strict": true,
+    "forceConsistentCasingInFileNames": true,
     "noEmit": true,
     "esModuleInterop": true,
     "module": "esnext",
@@ -22,21 +19,18 @@
         "name": "next"
       }
     ],
-    "baseUrl": ".",
+    "baseUrl": ".", // Set the base URL for path aliases
     "paths": {
-      "@/*": [
-        "./src/*"
-      ]
-    }
+      "@/*": ["./src/*"] // Define the `@/` alias
+    },
+    "typeRoots": ["./node_modules/@types", "./types"] // Explicitly tell TS to look in our `types` folder
   },
   "include": [
     "next-env.d.ts",
     "**/*.ts",
     "**/*.tsx",
     ".next/types/**/*.ts",
-    "types/**/*.d.ts" // <-- THIS LINE TELLS TYPESCRIPT TO READ YOUR CUSTOM DECLARATION FILES
+    "types/global.d.ts" // Directly include the global types file for good measure
   ],
-  "exclude": [
-    "node_modules"
-  ]
+  "exclude": ["node_modules"]
 }

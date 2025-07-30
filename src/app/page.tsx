@@ -3,16 +3,16 @@
 
 import Link from 'next/link';
 import { ArrowRight, BarChart, Shield, BookOpen } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { motion, Variants } from 'framer-motion'; // <-- Import Variants type
 import { InteractiveFintechBackgroundV2 } from '@/components/ui/interactive-fintech-background-v2';
 import { useLanguage } from '@/context/LanguageContext';
 
 const ToolCard = ({ href, icon, title, children, cta }: { href: string; icon: React.ReactNode; title: string; children: React.ReactNode; cta: string; }) => (
     <Link href={href} className="group block h-full">
         <motion.div 
-            whileHover={{ y: -8, scale: 1.02 }}
+            whileHover={{ y: -8, scale: 1.03 }}
             transition={{ type: "spring", stiffness: 200, damping: 15 }}
-            className="h-full p-6 bg-slate-50/[.03] backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl shadow-black/30 overflow-hidden"
+            className="h-full p-6 bg-slate-50/[.03] backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl shadow-black/20 overflow-hidden"
         >
             <div 
                 className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-indigo-500/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"
@@ -64,7 +64,8 @@ export default function HomePage() {
 
     const currentContent = content[t('language' as any) === 'kr' ? 'kr' : 'en'];
 
-    const titleContainerVariants = {
+    // Explicitly type the variants to satisfy TypeScript
+    const titleContainerVariants: Variants = {
         hidden: { opacity: 0 },
         visible: { 
             opacity: 1,
@@ -72,20 +73,23 @@ export default function HomePage() {
         },
     };
 
-    const titleWordVariants = {
+    const titleWordVariants: Variants = {
         hidden: { opacity: 0, y: 20 },
         visible: { opacity: 1, y: 0, transition: { type: 'spring', stiffness: 100 } },
     };
     
-    // THE FIX FOR THE FRAMER MOTION ERROR IS HERE
-    const clarityVariants = {
+    // THE CORE FIX FOR THE BUILD ERROR
+    const clarityVariants: Variants = {
         hidden: { opacity: 0, scale: 0.5 },
         visible: {
             opacity: 1,
-            scale: [1, 1.3, 1],
-            // Use 'tween' or 'keyframes' for array-based animations instead of 'spring'.
-            // Also specify 'times' to control the timing of each keyframe.
-            transition: { duration: 0.8, ease: "easeInOut", times: [0, 0.5, 1] }
+            scale: [1, 1.3, 1], // The keyframe array for scale
+            transition: { 
+                duration: 0.8, 
+                // Use a predefined easing function name that Framer Motion's types recognize
+                ease: "circOut", 
+                times: [0, 0.5, 1] 
+            }
         },
     };
 

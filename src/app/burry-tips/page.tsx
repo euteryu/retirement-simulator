@@ -58,7 +58,7 @@ const InsightCard = ({ title, icon, children }: { title: string, icon: React.Rea
 
         {/* --- THE FIX IS HERE --- */}
         {/* This outer div sets the base font size and line height. */}
-        <div className="text-[19px] leading-relaxed">
+        <div className="text-[18px] leading-relaxed">
             {/* The inner div applies prose styling, which now inherits the 22px base size. */}
             <div className="prose dark:prose-invert max-w-none 
                             prose-p:text-inherit 

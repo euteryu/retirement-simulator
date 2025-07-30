@@ -9,12 +9,23 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { COLORS } from '@/lib/constants';
 
 interface PerformanceChartsProps {
-  chartData: any[];
+  chartData: Record<string, string | number>[]; // An array of objects
   selectedStrategies: string[];
 }
 
+interface CustomTooltipProps {
+    active?: boolean;
+    payload?: {
+        name: string;
+        value: number;
+        color: string;
+        dataKey: string;
+    }[];
+    label?: string;
+}
+
 // A custom tooltip for a more polished UI
-const CustomTooltip = ({ active, payload, label }: any) => {
+const CustomTooltip = ({ active, payload, label }: CustomTooltipProps) => { 
   if (active && payload && payload.length) {
     return (
       <div className="p-3 bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm border border-slate-200 dark:border-slate-700 rounded-lg shadow-lg">
